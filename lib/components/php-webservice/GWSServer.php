@@ -2,13 +2,11 @@
 
 class GWSServer
 {
-	public $isNotification = false;
-	
 	public static $strErrorLogFilePath = "";
 
 	public $HTTPResponseCode = 0;
 	
-	public $RequestHandler = null;
+	public $RequestHandler = NULL;
 
 	const HTTP_200_OK = 200;
 	
@@ -50,36 +48,39 @@ class GWSServer
 		try
 		{
 			// get RAW request
-			if(is_null($JSONRequest) && ($_SERVER["REQUEST_METHOD"]=="PUT" || $_SERVER["REQUEST_METHOD"]=="POST")) {
-					$JSONRequest = file_get_contents("php://input");
-			}
-			
-			// check if request is empty
-			if(!strlen(trim($JSONRequest))) {
-				throw new Exception("Invalid request.");
-			}
+			if(is_null($JSONRequest) && (in_array($_SERVER["REQUEST_METHOD"], array("POST", "PUT", "DELETE")))) {
+				$JSONRequest = file_get_contents("php://input");
+
+				// check if request body is empty
+				// if(!strlen(trim($JSONRequest))) {
+					// throw new Exception("Invalid request.");
+				// }
+			}			
 
 			// try parsing the request as JSON object
-			try
-			{
-				$request = json_decode($JSONRequest, true); 
-			}
-			catch(Exception $exc)
-			{
-				throw new Exception($exc->getMessage().". RAW request : ".$JSONRequest);
+			if(strlen(trim($JSONRequest))) {
+				try
+				{
+					$request = json_decode($JSONRequest, true); 
+				}
+				catch(Exception $exc)
+				{
+					throw new Exception($exc->getMessage().". RAW request : ".$JSONRequest);
+				}
+			}	else {
+				$request = NULL;
 			}
 
 			$strRequestURL = $_SERVER['PATH_INFO'];
+			$strMethod = $_SERVER['REQUEST_METHOD'];
+			
+			$result = $this->RequestHandler->process($strMethod, $strRequestURL, $request);
 
-			$objResult = $this->RequestHandler->process($request, $strRequestURL);
-
-			if(isset($objResult["error"])) {
-				$response =  $objResult["error"];
+			if(isset($result["error"])) {
+				$response =  $result["error"];
 			} else {
-				$response = $objResult["result"];
+				$response = $result["result"];
 			}
-			// file_put_contents(dirname(__FILE__)."/log.txt", json_encode($response));
-			// $response["result"] = "'ok'";
 						
 		}
 		catch(Exception $exc)
@@ -100,24 +101,26 @@ class GWSServer
 	}
 
 	protected function _returnResponse($receivedResponse)
-	{		
+	{
 		if(!$this->HTTPResponseCode) {
 			$this->HTTPResponseCode = self::HTTP_500_INTERNAL_SERVER_ERROR;
 		}
 		
 		static $arrHTTPResponseCodesToText = array(
 			self::HTTP_200_OK=>"OK",
+			self::HTTP_201_CREATED=>"CREATED",
 			self::HTTP_204_NO_CONTENT=>"No Content",
 			self::HTTP_401_UNAUTHORIZED=>"Unauthorized",
 			self::HTTP_403_FORBIDDEN=>"Forbidden",
 			self::HTTP_500_INTERNAL_SERVER_ERROR=>"Internal Server Error"
 		);
 		
-		if(isset($_SERVER["REQUEST_METHOD"]) && in_array($_SERVER["REQUEST_METHOD"], array("GET", "POST", "PUT", "DELETE"))){
-			$this->_set_header("HTTP/1.1 ".(int)$this->HTTPResponseCode." ".$arrHTTPResponseCodesToText[(int)$this->HTTPResponseCode], true, $this->HTTPResponseCode);
+		if(isset($_SERVER["REQUEST_METHOD"]) && in_array($_SERVER["REQUEST_METHOD"], array("GET", "POST", "PUT", "DELETE"))) {
+			$httpHeader = "HTTP/1.1 ".(int)$this->HTTPResponseCode." ".$arrHTTPResponseCodesToText[(int)$this->HTTPResponseCode];
+			header($httpHeader, true, $this->HTTPResponseCode);
 		}
 
-		$this->_set_header("Content-type: application/json",true, (int)$this->HTTPResponseCode);
+		header("Content-type: application/json",true, (int)$this->HTTPResponseCode);
 		
 		echo json_encode($receivedResponse);
 		
@@ -130,14 +133,7 @@ class GWSServer
 		}
 		exit(1);
 	}
-	
-	protected  function _set_header($header, $replace=true, $code)
-	{
-		if(isset($_SERVER["REQUEST_METHOD"]) && in_array($_SERVER["REQUEST_METHOD"], array("GET", "POST", "PUT", "DELETE")))
-			header($header, $replace, $code);
-	}
-
-
+	/*
 	protected function _encodeExceptionToJSON(Exception $exception)
 	{
 		$message = $exception->getMessage();
@@ -152,32 +148,7 @@ class GWSServer
 		);
 		
 		return $arrResponse;
-	}
-	/*
-	
-
-	public function callFunction($functionName, $params)
-	{
-		$this->assertFunctionIsAllowed($functionName);
-		
-		if(!is_callable($functionName))
-			throw new JSONRPC_Exception("Internal error. The function ".$functionName." is not defined or loaded.", JSONRPC_Exception::METHOD_NOT_FOUND);
-				
-		$result = call_user_func_array($functionName, $params);
-	
-		return $result;
-	}
-
-	public function assertFunctionIsAllowed($functionName)
-	{
-		if(!in_array($functionName, $this->whitelistedFunctions))
-		{
-			$this->HTTPResponseCode = self::HTTP_403_FORBIDDEN;
-			throw new JSONRPC_Exception("The function \"".$functionName."\" is not whitelisted and/or does not exist.", JSONRPC_Exception::METHOD_NOT_FOUND);
-		}
-		
-		return true;
-	}
+	}	
 	
 	//stackoverflow
 	protected function _log_exception($exc)

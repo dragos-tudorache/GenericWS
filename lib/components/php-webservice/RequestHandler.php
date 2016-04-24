@@ -15,8 +15,6 @@ class RequestHandler {
 	public function process($strRequestMethod, $strRequestURL, $requestBody) {
 		
 		$response = array();
-		// $response["result"]["body"] = $requestBody;
-		// $response["result"]["url"] = $strRequestURL;
 		// file_put_contents(BASE_PATH."/log/log.txt", "asdasas"."\r\n", FILE_APPEND);
 
 		// parse URL for components
@@ -34,17 +32,17 @@ class RequestHandler {
 			$functionName = $this->actionsMapper[$strRequestMethod][$strResource];
 			if(!strlen(trim($functionName))) 
 			{
-				$response["result"]["error"] = "Error: No operation defined for resource : ".$strResource;
+				$response["result"]["error"] = "Error: Invalid operation";
 			} else {
 
-				$response["result"]["body"] = $this->actionsMapper[$strRequestMethod][$strResource];
-				// $response["result"]["body"] = $this->call_user_func_array($functionName, array($strRequestURL, $requestBody));
+				// $response["result"]["body"] = $this->actionsMapper[$strRequestMethod][$strResource];
+				// file_put_contents(BASE_PATH."/log/log.txt", json_encode($asdf)."\r\n", FILE_APPEND);
+				$response["result"] = call_user_func(
+					$functionName, 
+					array("requestBody" => $requestBody, "reuqestURL" => $strRequestURL )
+				);
 			} 
 		}
-
-		// $response["result"]["body"] = $arrParsedURL[2];
-		// $response["result"]["body"] = $this->actionsMapper[$strRequestMethod][$arrParsedURL[1]];
-		
 
 		return $response;
 	}

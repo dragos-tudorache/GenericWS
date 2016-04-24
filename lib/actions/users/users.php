@@ -1,5 +1,5 @@
 <?php
-// require_once(dirname(dirname(dirname(dirname(__FILE__))))."/config/config.php");
+require_once(dirname(dirname(dirname(dirname(__FILE__))))."/config/config.php");
 // require_once("php/Mesher/devices.php");
 
 /**
@@ -11,59 +11,86 @@
 * @param string $userAddress.
 * @return true. Returns true on success. Throws on error.
 */
-function user_add($deviceID, $userName, $userPassword, $userMail, $userAddress=NULL)
+function user_create($functionData)
 {
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
+
+	// get the user unique identifier
+	$userID = explode('/', $functionData["reuqestURL"])[2];
+	// get request body params
+	$userData = $functionData["requestBody"];
+
+	$result = array();
+
+	$userExists = user_get($functionData);
 	
-	device_data($deviceID);
-	
+	// verify if user already exists
+	if($userExists !== NULL) 
+	{
+		$result["error"] = "User already exists.";
+		return $result;
+	}
+
 	try
 	{
 		$objDatabaseConnection=new PDO($strDSN, DB_USER, DB_PASS, array (
 			PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
 		));
 		
+				// `user_name`=".$objDatabaseConnection->quote($userData["user_name"]).",
 		$affectedRows = $objDatabaseConnection->exec("
 			INSERT INTO `users`
 			SET
-				`device_id`=".$objDatabaseConnection->quote($deviceID).",
-				`user_name`=".$objDatabaseConnection->quote($userName).",
-				`user_password`=".$objDatabaseConnection->quote(md5($userPassword)).",
-				`user_mail`=".$objDatabaseConnection->quote($userMail).",
-				`user_address`=".$objDatabaseConnection->quote($userAddress).",
+				`user_name`=".$objDatabaseConnection->quote($userID).",
+				`user_mail`=".$objDatabaseConnection->quote($userData["user_mail"]).",
+				`user_phone`=".$objDatabaseConnection->quote($userData["user_phone"]).",
+				`user_address`=".$objDatabaseConnection->quote($userData["user_address"]).",
+				`user_password_hash`=".$objDatabaseConnection->quote($userData["user_password_hash"]).",
+				`user_role`=".$objDatabaseConnection->quote((int)$userData["user_role"]).",
+				`user_hero_level`=".$objDatabaseConnection->quote((int)$userData["user_hero_level"]).",
 				`user_created_timestamp`=".$objDatabaseConnection->quote(gmdate(TIMEZONE_FORMAT)).",
 				`user_updated_timestamp`=".$objDatabaseConnection->quote(gmdate(TIMEZONE_FORMAT))."
-			;
-			");
+			;");
 
-		if(!$affectedRows)
-			throw new Exception("No user was added;");
+		if(!$affectedRows) {
+			$result["response"] = "Not added. Entry already exists.";
+		} else {
+			$result["response"] = "User added successfully.";
+		}
 		
 	} catch(PDOException $err) {
-		// echo 'PDO ERROR: ' . $err->getMessage();
-		throw new Exception($err->getMessage());
+		// file_put_contents(BASE_PATH."/log/log.txt", json_encode($err->getMessage())."\r\n", FILE_APPEND);
+		$result["error"] = "Database error: ".json_encode($err->getMessage());
 	}
-	return true;
+
+	return $result;
 }
 
 /**
 * This function fetches user data.
-* @param number $userID.
-* @return array containing the following keys:
-* user_id,
-* device_id,
-* user_name,
-* user_password,
-* user_mail,
-* user_address,
-* user_created_timestamp,
-* user_updated_timestamp
+* @param array functionData.
+* @return  NULL or array containing the following keys:
+* `user_id`
+* `user_name`
+* `user_mail`
+* `user_phone`
+* `user_address`
+* `user_password_hash`
+* `user_role`
+* `user_hero_level`
+* `user_created_timestamp`
+* `user_updated_timestamp`
 */
-function user_data($userID)
+function user_get($functionData)
 {
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
-	$resultSet=NULL;
 	
+	// get the user unique identifier
+	$userID = explode('/', $functionData["reuqestURL"])[2];
+	// get request body params
+	$userData = $functionData["requestBody"];
+
+	$result = NULL;
 	try
 	{
 		$objDatabaseConnection=new PDO($strDSN, DB_USER, DB_PASS, array (
@@ -74,28 +101,35 @@ function user_data($userID)
 			SELECT * 
 			FROM `users`
 			WHERE 
-				`user_id`=".$objDatabaseConnection->quote($userID)."
+				`user_name`=".$objDatabaseConnection->quote($userID)."
 			")->fetch(PDO::FETCH_ASSOC);
 
-		if(!$resultSet)
-			throw new Exception("User does not exist.");
-	}catch(PDOException $err) {
-		// echo 'PDO ERROR: ' . $err->getMessage();
-		throw new Exception($err->getMessage());
+		if($resultSet) {
+			$result["response"] = $resultSet;
+		}
+	} catch(PDOException $err) {
+		$result["error"] = "Database error: ".json_encode($err->getMessage());
 	}
 
-	return $resultSet;
+	return $result;
 }
 
 /**
 * This function deletes users.
-* @param number $userID.
-* @return true. Throws  on error.
+* @param number $functionData.
+* @return true/false.
 */
-function user_delete($userID)
+function user_delete($functionData)
 {
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
 	
+	// get the user unique identifier
+	$userID = explode('/', $functionData["reuqestURL"])[2];
+	// get request body params
+	$userData = $functionData["requestBody"];
+
+	$result["response"] = true;
+
 	try
 	{
 		$objDatabaseConnection=new PDO($strDSN, DB_USER, DB_PASS, array (
@@ -106,17 +140,17 @@ function user_delete($userID)
 			DELETE 
 			FROM `users`
 			WHERE 
-				`user_id`=".$objDatabaseConnection->quote($userID)."
+				`user_name`=".$objDatabaseConnection->quote($userID)."
 			");
 
-		if(!$affectedRows)
-			throw new Exception("Failed to delete user.");
-	}catch(PDOException $err) {
-		// echo 'PDO ERROR: ' . $err->getMessage();
-		throw new Exception($err->getMessage());
+		if(!$affectedRows) {
+			$result["response"] = false;
+		}
+	} catch(PDOException $err) {
+		$result["error"] = "Database error: ".json_encode($err->getMessage());
 	}
 
-	return true;
+	return $result;
 }
 
 /**
@@ -129,10 +163,26 @@ function user_delete($userID)
 * user_address
 * @return true. Updates on success throws error if no modification takes place.
 */
-function user_update($userID, $updateData)
+function user_update($functionData)
 {
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
 	
+	// get the user unique identifier
+	$userID = explode('/', $functionData["reuqestURL"])[2];
+	// get request body params
+	$userData = $functionData["requestBody"];
+
+	$result = array();
+
+	$userExists = user_get($functionData);
+	
+	// trying to update non-existent user
+	if($userExists === NULL || isset($userExists["error"])) 
+	{
+		$result["error"] = "Could not update. User does not exist.";
+		return $result;
+	}
+
 	try
 	{
 		$objDatabaseConnection=new PDO($strDSN, DB_USER, DB_PASS, array (
@@ -142,30 +192,35 @@ function user_update($userID, $updateData)
 		$affectedRows = $objDatabaseConnection->exec("
 			UPDATE `users`
 			SET
-				`user_name`=".$objDatabaseConnection->quote($updateData["user_name"]).",
-				`user_password`=".$objDatabaseConnection->quote(md5($updateData["user_password"])).",
-				`user_mail`=".$objDatabaseConnection->quote($updateData["user_mail"]).",
-				`user_address`=".$objDatabaseConnection->quote($updateData["user_address"])."
+				`user_mail`=".$objDatabaseConnection->quote($userData["user_mail"]).",
+				`user_phone`=".$objDatabaseConnection->quote($userData["user_phone"]).",
+				`user_address`=".$objDatabaseConnection->quote($userData["user_address"]).",
+				`user_password_hash`=".$objDatabaseConnection->quote($userData["user_password_hash"]).",
+				`user_role`=".$objDatabaseConnection->quote((int)$userData["user_role"]).",
+				`user_hero_level`=".$objDatabaseConnection->quote((int)$userData["user_hero_level"])."
 			WHERE 
-				`user_id`=".$objDatabaseConnection->quote($userID)."
+				`user_name`=".$objDatabaseConnection->quote($userID)."
 			");
 
-		if(!$affectedRows)
-			throw new Exception("Must update at least one row.");
-			
-		$objDatabaseConnection->exec("
-			UPDATE `users`
-			SET	
-				`user_updated_timestamp`=".$objDatabaseConnection->quote(gmdate(TIMEZONE_FORMAT))."
-			WHERE 
-				`user_id`=".$objDatabaseConnection->quote($userID)."
-		");
-	}catch(PDOException $err) {
-		// echo 'PDO ERROR: ' . $err->getMessage();
-		throw new Exception($err->getMessage());
+		if(!$affectedRows) {
+			$result["response"] = "Nothing to update.";
+		} else {
+			// update timestamp with latest modification
+			$objDatabaseConnection->exec("
+				UPDATE `users`
+				SET	
+					`user_updated_timestamp`=".$objDatabaseConnection->quote(gmdate(TIMEZONE_FORMAT))."
+				WHERE 
+					`user_name`=".$objDatabaseConnection->quote($userID)."
+			");
+
+			$result["response"] = "User updated successfully.";
+		}
+	} catch(PDOException $err) {
+		$result["error"] = "Database error: ".json_encode($err->getMessage());
 	}
 
-	return true;
+	return $result;
 }
 
 /**
@@ -208,7 +263,7 @@ function user_set_new_password($userID, $userNewPassword)
 * @return string $userID.
 */
 function user_name_to_user_id($userName)
-{/*
+{
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
 	$resultSet=NULL;
 	try
@@ -235,7 +290,7 @@ function user_name_to_user_id($userName)
 		throw new Exception($err->getMessage());
 	}
 	
-	return $resultSet;*/
+	return $resultSet;
 }
 
 /**

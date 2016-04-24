@@ -1,0 +1,2 @@
+"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '01650450651' for key 'user_phone'"
+"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '01650450651' for key 'user_phone'"

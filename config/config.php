@@ -8,7 +8,7 @@ set_include_path(
 
 const DB_TYPE="mysql";
 const DB_HOST="localhost";
-const DB_NAME="mesher";
+const DB_NAME="mainoi_service";
 const DB_USER="root";
 const DB_PASS="";
 

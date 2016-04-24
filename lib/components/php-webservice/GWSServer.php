@@ -61,11 +61,12 @@ class GWSServer
 			if(strlen(trim($JSONRequest))) {
 				try
 				{
-					$request = json_decode($JSONRequest, true); 
+					$request = json_decode($JSONRequest, true);
 				}
 				catch(Exception $exc)
 				{
-					throw new Exception($exc->getMessage().". RAW request : ".$JSONRequest);
+					// throw new Exception($exc->getMessage().". RAW request : ".$JSONRequest);
+					throw new Exception("Invalid JSON request.");
 				}
 			}	else {
 				$request = NULL;
@@ -94,7 +95,7 @@ class GWSServer
 			// {
 			// 	$response = $this->_encodeExceptionToJSON($exc);
 			// }
-			$response["result"] = "lol";
+			$response["result"] = "Fix this" + $exc;
 		}
 		
 		return $response;

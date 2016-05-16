@@ -1,6 +1,40 @@
 <?php
 require_once(dirname(dirname(dirname(dirname(__FILE__))))."/config/config.php");
-// require_once("php/Mesher/devices.php");
+
+// array("requestBody" => $requestBody, "requestURL" => $strRequestURL, "method" => $functionName )
+function handle_user($handleData) {
+
+	if($handleData["method"] == "user_create") {
+		// parse params for method and return the result
+		return user_create($handleData["requestBody"]);
+
+	} elseif($handleData["method"] == "user_get") {
+
+		// get the user unique tag
+		$dataObject["user_unique_tag"] = explode('/', $handleData["requestURL"])[2];
+		return user_get($dataObject);
+
+	} elseif($handleData["method"] == "user_delete") {
+
+		// get the user unique tag
+		$dataObject["user_unique_tag"] = explode('/', $handleData["requestURL"])[2];
+		return user_delete($dataObject);
+
+	} elseif($handleData["method"] == "user_update") {
+
+		// get the user unique tag
+		$dataObject["user_unique_tag"] = explode('/', $handleData["requestURL"])[2];
+		$dataObject["update_data"] = $handleData["requestBody"];
+		return user_update($dataObject);
+
+	} else {
+
+		$response["error"]["code"] = 10120;
+		$response["error"]["message"] = "Method not handled";
+		return $response;
+	}
+}
+
 
 /**
 * This function adds new users in database;
@@ -11,23 +45,21 @@ require_once(dirname(dirname(dirname(dirname(__FILE__))))."/config/config.php");
 * @param string $userAddress.
 * @return true. Returns true on success. Throws on error.
 */
-function user_create($functionData)
+function user_create($dataObject)
 {
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
 
 	// get the user unique identifier
-	$userID = explode('/', $functionData["reuqestURL"])[2];
-	// get request body params
-	$userData = $functionData["requestBody"];
+	$userID = $dataObject["user_unique_tag"];
 
 	$result = array();
 
-	$userExists = user_get($functionData);
-	
+	$userExists = user_get(array("user_unique_tag" => $userID));
+
 	// verify if user already exists
-	if($userExists !== NULL) 
-	{
-		$result["error"] = "User already exists.";
+	if($userExists["data"] !== false) {
+		$result["error"]["code"] = 10121;
+		$result["error"]["message"] = "User already exists";
 		return $result;
 	}
 
@@ -37,30 +69,32 @@ function user_create($functionData)
 			PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
 		));
 		
-				// `user_name`=".$objDatabaseConnection->quote($userData["user_name"]).",
 		$affectedRows = $objDatabaseConnection->exec("
 			INSERT INTO `users`
 			SET
-				`user_name`=".$objDatabaseConnection->quote($userID).",
-				`user_mail`=".$objDatabaseConnection->quote($userData["user_mail"]).",
-				`user_phone`=".$objDatabaseConnection->quote($userData["user_phone"]).",
-				`user_address`=".$objDatabaseConnection->quote($userData["user_address"]).",
-				`user_password_hash`=".$objDatabaseConnection->quote($userData["user_password_hash"]).",
-				`user_role`=".$objDatabaseConnection->quote((int)$userData["user_role"]).",
-				`user_hero_level`=".$objDatabaseConnection->quote((int)$userData["user_hero_level"]).",
+				`user_unique_tag`=".$objDatabaseConnection->quote($dataObject["user_unique_tag"]).",
+				`user_first_name`=".$objDatabaseConnection->quote($dataObject["user_first_name"]).",
+				`user_last_name`=".$objDatabaseConnection->quote($dataObject["user_last_name"]).",
+				`user_mail`=".$objDatabaseConnection->quote($dataObject["user_mail"]).",
+				`user_phone`=".$objDatabaseConnection->quote($dataObject["user_phone"]).",
+				`user_address`=".$objDatabaseConnection->quote($dataObject["user_address"]).",
+				`user_password_hash`=".$objDatabaseConnection->quote($dataObject["user_password_hash"]).",
+				`user_role`=".$objDatabaseConnection->quote((int)$dataObject["user_role"]).",
+				`user_hero_level`=".$objDatabaseConnection->quote((int)$dataObject["user_hero_level"]).",
 				`user_created_timestamp`=".$objDatabaseConnection->quote(gmdate(TIMEZONE_FORMAT)).",
 				`user_updated_timestamp`=".$objDatabaseConnection->quote(gmdate(TIMEZONE_FORMAT))."
 			;");
-
+		
 		if(!$affectedRows) {
-			$result["response"] = "Not added. Entry already exists.";
+			$result["error"]["code"] = 10122;
+			$result["error"]["message"] = "Not added. No rows affected";
 		} else {
-			$result["response"] = "User added successfully.";
+			$result = user_get(array("user_unique_tag" => $userID));
 		}
 		
 	} catch(PDOException $err) {
-		// file_put_contents(BASE_PATH."/log/log.txt", json_encode($err->getMessage())."\r\n", FILE_APPEND);
-		$result["error"] = "Database error: ".json_encode($err->getMessage());
+		$result["error"]["code"] = 10110;
+		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 
 	return $result;
@@ -68,7 +102,7 @@ function user_create($functionData)
 
 /**
 * This function fetches user data.
-* @param array functionData.
+* @param array userId.
 * @return  NULL or array containing the following keys:
 * `user_id`
 * `user_name`
@@ -81,15 +115,9 @@ function user_create($functionData)
 * `user_created_timestamp`
 * `user_updated_timestamp`
 */
-function user_get($functionData)
+function user_get($dataObject)
 {
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
-	
-	// get the user unique identifier
-	$userID = explode('/', $functionData["reuqestURL"])[2];
-	// get request body params
-	$userData = $functionData["requestBody"];
-
 	$result = NULL;
 	try
 	{
@@ -101,14 +129,19 @@ function user_get($functionData)
 			SELECT * 
 			FROM `users`
 			WHERE 
-				`user_name`=".$objDatabaseConnection->quote($userID)."
+				`user_unique_tag`=".$objDatabaseConnection->quote($dataObject["user_unique_tag"])."
 			")->fetch(PDO::FETCH_ASSOC);
+	// file_put_contents(BASE_PATH."/log/log.txt", $dataObject["user_unique_tag"]."\r\n", FILE_APPEND);
+	// file_put_contents(BASE_PATH."/log/log.txt", "IN GET:".$dataObject["user_unique_tag"].":".json_encode($resultSet)."\r\n", FILE_APPEND);
 
-		if($resultSet) {
-			$result["response"] = $resultSet;
+		if(!$resultSet) {
+			$result["data"] = false;
+		} else {
+			$result["data"] = $resultSet;
 		}
 	} catch(PDOException $err) {
-		$result["error"] = "Database error: ".json_encode($err->getMessage());
+		$result["error"]["code"] = 10110;
+		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 
 	return $result;
@@ -119,16 +152,11 @@ function user_get($functionData)
 * @param number $functionData.
 * @return true/false.
 */
-function user_delete($functionData)
+function user_delete($dataObject)
 {
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
-	
-	// get the user unique identifier
-	$userID = explode('/', $functionData["reuqestURL"])[2];
-	// get request body params
-	$userData = $functionData["requestBody"];
 
-	$result["response"] = true;
+	$result["data"] = true;
 
 	try
 	{
@@ -140,14 +168,15 @@ function user_delete($functionData)
 			DELETE 
 			FROM `users`
 			WHERE 
-				`user_name`=".$objDatabaseConnection->quote($userID)."
+				`user_unique_tag`=".$objDatabaseConnection->quote($dataObject["user_unique_tag"])."
 			");
 
 		if(!$affectedRows) {
-			$result["response"] = false;
+			$result["data"] = false;
 		}
 	} catch(PDOException $err) {
-		$result["error"] = "Database error: ".json_encode($err->getMessage());
+		$result["error"]["code"] = 10110;
+		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 
 	return $result;
@@ -163,23 +192,42 @@ function user_delete($functionData)
 * user_address
 * @return true. Updates on success throws error if no modification takes place.
 */
-function user_update($functionData)
+function user_update($dataObject)
 {
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
 	
-	// get the user unique identifier
-	$userID = explode('/', $functionData["reuqestURL"])[2];
-	// get request body params
-	$userData = $functionData["requestBody"];
-
 	$result = array();
 
-	$userExists = user_get($functionData);
+	// obtain required params
+	$userData = $dataObject["update_data"];
+	$userID = $dataObject["user_unique_tag"];
+
+	// check if user exists
+	$userExists = user_get(array("user_unique_tag" => $userID));
+	// check if phone exists
+	$phoneExists = phone_exists($userData["user_phone"]);
+	// check if mail exists
+	$mailExists = mail_exists($userData["user_mail"]);
 	
+
 	// trying to update non-existent user
-	if($userExists === NULL || isset($userExists["error"])) 
-	{
-		$result["error"] = "Could not update. User does not exist.";
+	if($userExists["data"] === false) {
+		$result["error"]["code"] = 10124;
+		$result["error"]["message"] = "User does not exist";
+		return $result;
+	}
+
+	// validate phone 
+	if($phoneExists["data"] !== false) {
+		$result["error"]["code"] = 10125;
+		$result["error"]["message"] = "Phone number already exists";
+		return $result;
+	}
+
+	// validate mail
+	if($mailExists["data"] !== false) {
+		$result["error"]["code"] = 10126;
+		$result["error"]["message"] = "Mail already exists";
 		return $result;
 	}
 
@@ -192,6 +240,8 @@ function user_update($functionData)
 		$affectedRows = $objDatabaseConnection->exec("
 			UPDATE `users`
 			SET
+				`user_first_name`=".$objDatabaseConnection->quote($userData["user_first_name"]).",
+				`user_last_name`=".$objDatabaseConnection->quote($userData["user_last_name"]).",
 				`user_mail`=".$objDatabaseConnection->quote($userData["user_mail"]).",
 				`user_phone`=".$objDatabaseConnection->quote($userData["user_phone"]).",
 				`user_address`=".$objDatabaseConnection->quote($userData["user_address"]).",
@@ -199,11 +249,11 @@ function user_update($functionData)
 				`user_role`=".$objDatabaseConnection->quote((int)$userData["user_role"]).",
 				`user_hero_level`=".$objDatabaseConnection->quote((int)$userData["user_hero_level"])."
 			WHERE 
-				`user_name`=".$objDatabaseConnection->quote($userID)."
+				`user_unique_tag`=".$objDatabaseConnection->quote($userID)."
 			");
 
 		if(!$affectedRows) {
-			$result["response"] = "Nothing to update.";
+			$result["data"] = false;
 		} else {
 			// update timestamp with latest modification
 			$objDatabaseConnection->exec("
@@ -211,51 +261,88 @@ function user_update($functionData)
 				SET	
 					`user_updated_timestamp`=".$objDatabaseConnection->quote(gmdate(TIMEZONE_FORMAT))."
 				WHERE 
-					`user_name`=".$objDatabaseConnection->quote($userID)."
+					`user_unique_tag`=".$objDatabaseConnection->quote($userID)."
 			");
 
-			$result["response"] = "User updated successfully.";
+			$result["data"] = true;
 		}
 	} catch(PDOException $err) {
-		$result["error"] = "Database error: ".json_encode($err->getMessage());
+		$result["error"]["code"] = 10110;
+		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 
 	return $result;
 }
 
 /**
-* This function updates user password.
-* @param string $userID;
-* @param string $userNewPassword.
-* @return true. This function will not throw if nothing changes.
+*
+*
+*
 */
-function user_set_new_password($userID, $userNewPassword)
-{/*
+function mail_exists($strUserMail) {
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
-	
+
+	$result = NULL;
 	try
 	{
 		$objDatabaseConnection=new PDO($strDSN, DB_USER, DB_PASS, array (
 			PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
 		));
 		
-		$affectedRows = $objDatabaseConnection->exec("
-			UPDATE `users`
-			SET
-				`user_password`=".$objDatabaseConnection->quote(md5($userNewPassword)).",
-				`user_updated_timestamp`=".$objDatabaseConnection->quote(gmdate(TIMEZONE_FORMAT))."
+		$resultSet = $objDatabaseConnection->query("
+			SELECT * 
+			FROM `users`
 			WHERE 
-				`user_id`=".$objDatabaseConnection->quote($userID)."
-			");
+				`user_mail`=".$objDatabaseConnection->quote($strUserMail)."
+			")->fetch(PDO::FETCH_ASSOC);
 
-	}catch(PDOException $err) {
-		// echo 'PDO ERROR: ' . $err->getMessage();
-		throw new Exception($err->getMessage());
+		if(!$resultSet) {
+			$result["data"] = false;
+		} else {
+			$result["data"] = true;
+		}
+	} catch(PDOException $err) {
+		$result["error"]["code"] = 10110;
+		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 
-	return true;*/
+	return $result;
 }
 
+/**
+*
+*
+*
+*/
+function phone_exists($strUserPhone) {
+	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
+
+	$result = NULL;
+	try
+	{
+		$objDatabaseConnection=new PDO($strDSN, DB_USER, DB_PASS, array (
+			PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+		));
+		
+		$resultSet = $objDatabaseConnection->query("
+			SELECT * 
+			FROM `users`
+			WHERE 
+				`user_phone`=".$objDatabaseConnection->quote($strUserPhone)."
+			")->fetch(PDO::FETCH_ASSOC);
+
+		if(!$resultSet) {
+			$result["data"] = false;
+		} else {
+			$result["data"] = true;
+		}
+	} catch(PDOException $err) {
+		$result["error"]["code"] = 10110;
+		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
+	}
+
+	return $result;
+}
 
 /**
 * Transforms user_name into user_id.
@@ -263,7 +350,7 @@ function user_set_new_password($userID, $userNewPassword)
 * @return string $userID.
 */
 function user_name_to_user_id($userName)
-{
+{/*
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
 	$resultSet=NULL;
 	try
@@ -286,11 +373,11 @@ function user_name_to_user_id($userName)
 	
 
 	}catch(PDOException $err) {
-		// echo 'PDO ERROR: ' . $err->getMessage();
-		throw new Exception($err->getMessage());
+		$result["error"]["code"] = 10110;
+		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 	
-	return $resultSet;
+	return $resultSet;*/
 }
 
 /**

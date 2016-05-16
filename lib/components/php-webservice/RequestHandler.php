@@ -26,21 +26,23 @@ class RequestHandler {
 		//check if the resource is set in the URL (user/..,actions...)
 		if(!array_key_exists($strResource, $this->allowedHandleMethods))
 		{
-			$response["result"]["error"] = "Error: Resource does not exist, or operations not allowed on resource : ".$strResource;
+			$response["error"] = "Error: Resource does not exist, or operations not allowed on resource : ".$strResource;
 		} else {
 			// check if the actionsMapper has operation defined for resource (e.g. GET + user => user_get operation)
 			$functionName = $this->actionsMapper[$strRequestMethod][$strResource];
 			if(!strlen(trim($functionName))) 
 			{
-				$response["result"]["error"] = "Error: Invalid operation";
+				$response["error"] = "Error: Invalid operation";
 			} else {
 
 				// $response["result"]["body"] = $this->actionsMapper[$strRequestMethod][$strResource];
-				// file_put_contents(BASE_PATH."/log/log.txt", json_encode($asdf)."\r\n", FILE_APPEND);
-				$response["result"] = call_user_func(
-					$functionName, 
-					array("requestBody" => $requestBody, "reuqestURL" => $strRequestURL )
+				// file_put_contents(BASE_PATH."/log/log.txt", json_encode($strRequestURL)."\r\n", FILE_APPEND);
+				$resourceAction = "handle_".strtolower($strResource);
+				$response = call_user_func(
+					$resourceAction, 
+					array("requestBody" => $requestBody, "requestURL" => $strRequestURL, "method" => $functionName )
 				);
+				// file_put_contents(BASE_PATH."/log/log.txt", json_encode($response)."\r\n", FILE_APPEND);
 			} 
 		}
 

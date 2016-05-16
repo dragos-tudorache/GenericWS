@@ -76,11 +76,11 @@ class GWSServer
 			$strMethod = $_SERVER['REQUEST_METHOD'];
 			
 			$result = $this->RequestHandler->process($strMethod, $strRequestURL, $request);
-
+			// file_put_contents(BASE_PATH."/log/log.txt", json_encode($strRequestURL)."\r\n", FILE_APPEND);
 			if(isset($result["error"])) {
-				$response =  $result["error"];
+				$response["error"] =  $result["error"];
 			} else {
-				$response = $result["result"];
+				$response["data"] = $result["data"];
 			}
 						
 		}

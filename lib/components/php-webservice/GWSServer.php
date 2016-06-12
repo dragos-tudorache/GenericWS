@@ -95,7 +95,7 @@ class GWSServer
 			// {
 			// 	$response = $this->_encodeExceptionToJSON($exc);
 			// }
-			$response["result"] = "Fix this" + $exc;
+			$response["error"] = "Fix this" + $exc;
 		}
 		
 		return $response;
@@ -104,7 +104,7 @@ class GWSServer
 	protected function _returnResponse($receivedResponse)
 	{
 		if(!$this->HTTPResponseCode) {
-			$this->HTTPResponseCode = self::HTTP_500_INTERNAL_SERVER_ERROR;
+			$this->HTTPResponseCode = self::HTTP_200_OK;
 		}
 		
 		static $arrHTTPResponseCodesToText = array(

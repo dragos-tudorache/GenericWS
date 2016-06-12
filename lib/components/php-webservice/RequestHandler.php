@@ -15,7 +15,6 @@ class RequestHandler {
 	public function process($strRequestMethod, $strRequestURL, $requestBody) {
 		
 		$response = array();
-		// file_put_contents(BASE_PATH."/log/log.txt", "asdasas"."\r\n", FILE_APPEND);
 
 		// parse URL for components
 		$arrParsedURL = explode('/', $strRequestURL);
@@ -36,8 +35,12 @@ class RequestHandler {
 			} else {
 
 				// $response["result"]["body"] = $this->actionsMapper[$strRequestMethod][$strResource];
-				// file_put_contents(BASE_PATH."/log/log.txt", json_encode($strRequestURL)."\r\n", FILE_APPEND);
-				$resourceAction = "handle_".strtolower($strResource);
+				if($strResource == "users") {
+					$resourceAction = "handle_user";
+				} else {
+					$resourceAction = "handle_".strtolower($strResource);
+				}
+				// file_put_contents(BASE_PATH."/log/log.txt", json_encode($strResource)."\r\n", FILE_APPEND);
 				$response = call_user_func(
 					$resourceAction, 
 					array("requestBody" => $requestBody, "requestURL" => $strRequestURL, "method" => $functionName )

@@ -27,6 +27,10 @@ function handle_user($handleData) {
 		$dataObject["update_data"] = $handleData["requestBody"];
 		return user_update($dataObject);
 
+	} elseif($handleData["method"] == "users_get") {
+
+		return users_get();
+
 	} else {
 
 		$response["error"]["code"] = 10120;
@@ -126,13 +130,21 @@ function user_get($dataObject)
 		));
 		
 		$resultSet = $objDatabaseConnection->query("
-			SELECT * 
+			SELECT 
+				`user_unique_tag`,
+				`user_first_name`,
+				`user_last_name`,
+				`user_mail`,
+				`user_phone`,
+				`user_address`,
+				`user_password_hash`,
+				`user_role`,
+				`user_created_timestamp`,
+				`user_updated_timestamp` 
 			FROM `users`
 			WHERE 
 				`user_unique_tag`=".$objDatabaseConnection->quote($dataObject["user_unique_tag"])."
 			")->fetch(PDO::FETCH_ASSOC);
-	// file_put_contents(BASE_PATH."/log/log.txt", $dataObject["user_unique_tag"]."\r\n", FILE_APPEND);
-	// file_put_contents(BASE_PATH."/log/log.txt", "IN GET:".$dataObject["user_unique_tag"].":".json_encode($resultSet)."\r\n", FILE_APPEND);
 
 		if(!$resultSet) {
 			$result["data"] = false;
@@ -218,18 +230,18 @@ function user_update($dataObject)
 	}
 
 	// validate phone 
-	if($phoneExists["data"] !== false) {
-		$result["error"]["code"] = 10125;
-		$result["error"]["message"] = "Phone number already exists";
-		return $result;
-	}
+	// if($phoneExists["data"] !== false) {
+	// 	$result["error"]["code"] = 10125;
+	// 	$result["error"]["message"] = "Phone number already exists";
+	// 	return $result;
+	// }
 
 	// validate mail
-	if($mailExists["data"] !== false) {
-		$result["error"]["code"] = 10126;
-		$result["error"]["message"] = "Mail already exists";
-		return $result;
-	}
+	// if($mailExists["data"] !== false) {
+	// 	$result["error"]["code"] = 10126;
+	// 	$result["error"]["message"] = "Mail already exists";
+	// 	return $result;
+	// }
 
 	try
 	{
@@ -273,6 +285,49 @@ function user_update($dataObject)
 
 	return $result;
 }
+
+/**
+*
+*/
+function users_get()
+{
+	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
+	$result = NULL;
+	try
+	{
+		$objDatabaseConnection=new PDO($strDSN, DB_USER, DB_PASS, array (
+			PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+		));
+		
+		$resultSet = $objDatabaseConnection->query("
+			SELECT 
+				`user_unique_tag`,
+				`user_first_name`,
+				`user_last_name`,
+				`user_mail`,
+				`user_phone`,
+				`user_address`,
+				`user_password_hash`,
+				`user_role`,
+				`user_created_timestamp`,
+				`user_updated_timestamp` 
+			FROM `users`
+			ORDER BY `user_unique_tag`
+			")->fetchAll(PDO::FETCH_ASSOC);
+
+		if(!$resultSet) {
+			$result["data"] = false;
+		} else {
+			$result["data"] = $resultSet;
+		}
+	} catch(PDOException $err) {
+		$result["error"]["code"] = 10110;
+		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
+	}
+
+	return $result;
+}
+
 
 /**
 *
@@ -349,10 +404,10 @@ function phone_exists($strUserPhone) {
 * @param string $userName;
 * @return string $userID.
 */
-function user_name_to_user_id($userName)
-{/*
+function user_phone_to_user_unique_tag($strUserPhone)
+{
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
-	$resultSet=NULL;
+	$result=NULL;
 	try
 	{
 		$objDatabaseConnection=new PDO($strDSN, DB_USER, DB_PASS, array (
@@ -360,24 +415,27 @@ function user_name_to_user_id($userName)
 		));
 		
 		$resultSet = $objDatabaseConnection->query("
-			SELECT `user_id`
+			SELECT `user_unique_tag`
 			FROM `users`
 			WHERE 
-				`user_name`=".$objDatabaseConnection->quote($userName)."
+				`user_mail`=".$objDatabaseConnection->quote($strUserMail)."
 			;")->fetchColumn();
 	
-		if(count($resultSet) > 1)
-			throw new Exception("Multiple instances were found.");
-		if(!$resultSet)
-			throw new Exception("No user was found.");
-	
-
+		if(count($resultSet) > 1) {
+			$result["error"]["code"] = 10125;
+			$result["error"]["message"] = "Multiple instances were found";
+		} else if(!$resultSet) {
+			$result["error"]["code"] = 10126;
+			$result["error"]["message"] = "No user was found";
+		} else {
+			$result["data"] = $resultSet;
+		}
 	}catch(PDOException $err) {
 		$result["error"]["code"] = 10110;
 		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 	
-	return $resultSet;*/
+	return $result;
 }
 
 /**
@@ -385,13 +443,10 @@ function user_name_to_user_id($userName)
 * @param string $userName;
 * @return string $userID.
 */
-function user_id_to_user_name($userID)
-{/*
+function user_mail_to_user_unique_tag($strUserMail)
+{
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
-	$resultSet=NULL;
-
-	user_data((int)$userID);
-
+	$result=NULL;
 	try
 	{
 		$objDatabaseConnection=new PDO($strDSN, DB_USER, DB_PASS, array (
@@ -399,56 +454,25 @@ function user_id_to_user_name($userID)
 		));
 		
 		$resultSet = $objDatabaseConnection->query("
-			SELECT `user_name`
+			SELECT `user_unique_tag`
 			FROM `users`
 			WHERE 
-				`user_id`=".(int)$userID."
+				`user_mail`=".$objDatabaseConnection->quote($strUserMail)."
 			;")->fetchColumn();
 	
-		if(count($resultSet) > 1)
-			throw new Exception("Multiple instances were found.");
-		if(!$resultSet)
-			throw new Exception("No result was found.");
-	
-
+		if(count($resultSet) > 1) {
+			$result["error"]["code"] = 10125;
+			$result["error"]["message"] = "Multiple instances were found";
+		} else if(!$resultSet) {
+			$result["error"]["code"] = 10126;
+			$result["error"]["message"] = "No user was found";
+		} else {
+			$result["data"] = $resultSet;
+		}
 	}catch(PDOException $err) {
-		// echo 'PDO ERROR: ' . $err->getMessage();
-		throw new Exception($err->getMessage());
+		$result["error"]["code"] = 10110;
+		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 	
-	return $resultSet;*/
-}
-
-/**
-* Gets all users.
-* @return array.
-*/
-function users_get()
-{/*
-	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
-	$resultSet=NULL;
-	
-	try
-	{
-		$objDatabaseConnection=new PDO($strDSN, DB_USER, DB_PASS, array (
-			PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-		));
-		
-		$resultSet = $objDatabaseConnection->query("
-			SELECT 
-				`user_id`,
-				`user_name`,
-				`device_id`
-			FROM `users`
-			ORDER BY `user_id`
-			")->fetchAll(PDO::FETCH_ASSOC);
-
-		if(!$resultSet)
-			throw new Exception("No users exist.");
-	}catch(PDOException $err) {
-		// echo 'PDO ERROR: ' . $err->getMessage();
-		throw new Exception($err->getMessage());
-	}
-
-	return $resultSet;*/
+	return $result;
 }

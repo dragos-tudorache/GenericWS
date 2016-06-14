@@ -4,9 +4,10 @@ require_once("lib/components/php-webservice/GWSServer.php");
 require_once("lib/components/php-webservice/RequestHandler.php");
 require_once("lib/actions/ActionsMapper.php");
 require_once("lib/actions/users/users.php");
+require_once("lib/actions/login/login.php");
 
 $allowedFunctionCalls = array(
-	"user" => array("user_add", "user_data", "user_delete",	"user_update", "users_get")
+	"login" => array("login")
 	);
 
 $actionsMap = new ActionsMapper();

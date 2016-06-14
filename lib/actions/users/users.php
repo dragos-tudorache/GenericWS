@@ -408,6 +408,7 @@ function user_phone_to_user_unique_tag($strUserPhone)
 {
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
 	$result=NULL;
+
 	try
 	{
 		$objDatabaseConnection=new PDO($strDSN, DB_USER, DB_PASS, array (
@@ -418,7 +419,7 @@ function user_phone_to_user_unique_tag($strUserPhone)
 			SELECT `user_unique_tag`
 			FROM `users`
 			WHERE 
-				`user_mail`=".$objDatabaseConnection->quote($strUserMail)."
+				`user_phone`=".$objDatabaseConnection->quote($strUserPhone)."
 			;")->fetchColumn();
 	
 		if(count($resultSet) > 1) {

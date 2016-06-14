@@ -4,7 +4,7 @@ class ActionsMapper
 {
 	private $actionsMap = array(
 		"GET" => array("user" => "user_get", "users" => "users_get"),
-		"POST" => array("user" => "user_create"),
+		"POST" => array("user" => "user_create", "login" => "login"),
 		"PUT" => array("user" => "user_update"),
 		"DELETE" => array("user" => "user_delete")
 	);

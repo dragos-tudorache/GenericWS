@@ -33,7 +33,7 @@ function handle_user($handleData) {
 
 	} else {
 
-		$response["error"]["code"] = 10120;
+		$response["error"]["code"] = 10119;
 		$response["error"]["message"] = "Method not handled";
 		return $response;
 	}
@@ -152,7 +152,7 @@ function user_get($dataObject)
 			$result["data"] = $resultSet;
 		}
 	} catch(PDOException $err) {
-		$result["error"]["code"] = 10110;
+		$result["error"]["code"] = 10109;
 		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 
@@ -187,7 +187,7 @@ function user_delete($dataObject)
 			$result["data"] = false;
 		}
 	} catch(PDOException $err) {
-		$result["error"]["code"] = 10110;
+		$result["error"]["code"] = 10108;
 		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 
@@ -279,7 +279,7 @@ function user_update($dataObject)
 			$result["data"] = true;
 		}
 	} catch(PDOException $err) {
-		$result["error"]["code"] = 10110;
+		$result["error"]["code"] = 10107;
 		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 
@@ -321,7 +321,7 @@ function users_get()
 			$result["data"] = $resultSet;
 		}
 	} catch(PDOException $err) {
-		$result["error"]["code"] = 10110;
+		$result["error"]["code"] = 10106;
 		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 
@@ -357,7 +357,7 @@ function mail_exists($strUserMail) {
 			$result["data"] = true;
 		}
 	} catch(PDOException $err) {
-		$result["error"]["code"] = 10110;
+		$result["error"]["code"] = 10105;
 		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 
@@ -392,7 +392,7 @@ function phone_exists($strUserPhone) {
 			$result["data"] = true;
 		}
 	} catch(PDOException $err) {
-		$result["error"]["code"] = 10110;
+		$result["error"]["code"] = 10104;
 		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 
@@ -432,7 +432,7 @@ function user_phone_to_user_unique_tag($strUserPhone)
 			$result["data"] = $resultSet;
 		}
 	}catch(PDOException $err) {
-		$result["error"]["code"] = 10110;
+		$result["error"]["code"] = 10103;
 		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 	
@@ -471,7 +471,7 @@ function user_mail_to_user_unique_tag($strUserMail)
 			$result["data"] = $resultSet;
 		}
 	}catch(PDOException $err) {
-		$result["error"]["code"] = 10110;
+		$result["error"]["code"] = 10102;
 		$result["error"]["message"] = "PDO error: ".json_encode($err->getMessage());
 	}
 	

@@ -19,3 +19,16 @@ CREATE TABLE IF NOT EXISTS `users` (
 	UNIQUE KEY `user_phone` (`user_phone`),
 	UNIQUE KEY `user_mail` (`user_mail`)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS `categories` (
+	`category_id` int(11) NOT NULL AUTO_INCREMENT,
+	`category_name` varchar(255) NOT NULL COLLATE utf8_unicode_ci,
+	`category_level` int(11),
+	`category_type` int(11),
+	`category_scores` text NOT NULL COLLATE utf8_unicode_ci,
+	`category_created_timestamp` DATETIME DEFAULT '0000-00-00 00:00:00',
+	`category_updated_timestamp` DATETIME DEFAULT '0000-00-00 00:00:00',
+	PRIMARY KEY (`category_id`),
+	UNIQUE KEY `category_name` (`category_name`)
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;

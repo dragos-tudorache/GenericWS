@@ -11,7 +11,10 @@ CREATE TABLE IF NOT EXISTS `users` (
 	`user_address` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
 	`user_password_hash` varchar(255) NOT NULL COLLATE utf8_unicode_ci,
 	`user_role` int(11) COMMENT 'Participant = 0, Volunteer = 1, Admin = 2' DEFAULT 0,
-	`user_hero_level` int(11) COMMENT 'None = 0, Legend = 1, Hero = 2, Guardian = 3' DEFAULT 0, 
+	`user_hero_level` int(11) COMMENT 'None = 0, Legend = 1, Hero = 2, Guardian = 3' DEFAULT 0,
+	`user_terms_agreement` TINYINT(1) COMMENT 'Users accept that their data will be shared with third party members' DEFAULT 0,
+	`user_terms_quiz_agreement` TINYINT(1) COMMENT 'Users accept the terms and conditions from the quiz' DEFAULT 0,
+	`user_newsletter` TINYINT(1) COMMENT 'Users accept the terms and conditions from the quiz' DEFAULT 0,
 	`user_created_timestamp` DATETIME DEFAULT '0000-00-00 00:00:00',
 	`user_updated_timestamp` DATETIME DEFAULT '0000-00-00 00:00:00',
 	PRIMARY KEY (`user_id`),
@@ -19,6 +22,16 @@ CREATE TABLE IF NOT EXISTS `users` (
 	UNIQUE KEY `user_phone` (`user_phone`),
 	UNIQUE KEY `user_mail` (`user_mail`)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;
+
+/**
+ALTER TABLE `users`
+ADD `user_terms_agreement` TINYINT(1) COMMENT 'Users accept that their data will be shared with third party members' DEFAULT 0 
+AFTER `user_hero_level`,
+ADD `user_terms_quiz_agreement` TINYINT(1) COMMENT 'Users accept the terms and conditions from the quiz' DEFAULT 0
+AFTER `user_hero_level`,
+ADD `user_newsletter` TINYINT(1) COMMENT 'Users accept the terms and conditions from the quiz' DEFAULT 0
+AFTER `user_hero_level`;
+**/
 
 
 CREATE TABLE IF NOT EXISTS `categories` (

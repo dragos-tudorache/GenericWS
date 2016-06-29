@@ -52,19 +52,33 @@ function handle_user($handleData) {
 function user_create($dataObject)
 {
 	$strDSN=DB_TYPE.":host=".DB_HOST.";dbname=".DB_NAME;
-
-	// get the user unique identifier
-	$userID = $dataObject["user_unique_tag"];
-
+	
 	$result = array();
 
-	$userExists = user_get(array("user_unique_tag" => $userID));
-
-	// verify if user already exists
-	if($userExists["data"] !== false) {
+	// validate new user mail
+	$userMailExists = mail_exists($dataObject["user_mail"]);
+	if($userMailExists["data"] !== false) {
 		$result["error"]["code"] = 10121;
-		$result["error"]["message"] = "User already exists";
+		$result["error"]["message"] = "User already exists with email address : ".$dataObject["user_mail"];
 		return $result;
+	}
+
+	// validate new user phone
+	$userPhoneExists = phone_exists($dataObject["user_phone"]);
+	if($userPhoneExists["data"] !== false) {
+		$result["error"]["code"] = 10101;
+		$result["error"]["message"] = "User already exists with phone number : ".$dataObject["user_phone"];
+		return $result;
+	}
+
+	// generate user unique id
+	$strUserUniqueIdentifier = $dataObject["user_mail"].$dataObject["user_phone"];
+	while(true) {
+		$strUserUniqueTag = "user_".sha1($strUserUniqueIdentifier).mt_rand(100000, 999999);
+		$userExists = user_get(array("user_unique_tag" => $strUserUniqueTag));
+		if($userExists["data"] === false){
+			break;
+		}
 	}
 
 	try
@@ -76,7 +90,7 @@ function user_create($dataObject)
 		$affectedRows = $objDatabaseConnection->exec("
 			INSERT INTO `users`
 			SET
-				`user_unique_tag`=".$objDatabaseConnection->quote($dataObject["user_unique_tag"]).",
+				`user_unique_tag`=".$objDatabaseConnection->quote($strUserUniqueTag).",
 				`user_first_name`=".$objDatabaseConnection->quote($dataObject["user_first_name"]).",
 				`user_last_name`=".$objDatabaseConnection->quote($dataObject["user_last_name"]).",
 				`user_mail`=".$objDatabaseConnection->quote($dataObject["user_mail"]).",
@@ -85,6 +99,9 @@ function user_create($dataObject)
 				`user_password_hash`=".$objDatabaseConnection->quote($dataObject["user_password_hash"]).",
 				`user_role`=".$objDatabaseConnection->quote((int)$dataObject["user_role"]).",
 				`user_hero_level`=".$objDatabaseConnection->quote((int)$dataObject["user_hero_level"]).",
+				`user_terms_agreement`=".$objDatabaseConnection->quote((int)$dataObject["user_terms_agreement"]).",
+				`user_terms_quiz_agreement`=".$objDatabaseConnection->quote((int)$dataObject["user_terms_quiz_agreement"]).",
+				`user_newsletter`=".$objDatabaseConnection->quote((int)$dataObject["user_newsletter"]).",
 				`user_created_timestamp`=".$objDatabaseConnection->quote(gmdate(TIMEZONE_FORMAT)).",
 				`user_updated_timestamp`=".$objDatabaseConnection->quote(gmdate(TIMEZONE_FORMAT))."
 			;");
@@ -93,7 +110,7 @@ function user_create($dataObject)
 			$result["error"]["code"] = 10122;
 			$result["error"]["message"] = "Not added. No rows affected";
 		} else {
-			$result = user_get(array("user_unique_tag" => $userID));
+			$result = user_get(array("user_unique_tag" => $strUserUniqueTag));
 		}
 		
 	} catch(PDOException $err) {
@@ -139,6 +156,9 @@ function user_get($dataObject)
 				`user_address`,
 				`user_password_hash`,
 				`user_role`,
+				`user_terms_agreement`,
+				`user_terms_quiz_agreement`,
+				`user_newsletter`,
 				`user_created_timestamp`,
 				`user_updated_timestamp` 
 			FROM `users`
@@ -249,20 +269,34 @@ function user_update($dataObject)
 			PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
 		));
 		
-		$affectedRows = $objDatabaseConnection->exec("
-			UPDATE `users`
-			SET
+		$updateQuery = "
+		UPDATE `users`
+			SET ";
+
+		if($userData["user_mail"] !== $userExists["data"]["user_mail"]) {
+			$updateQuery .= "`user_mail`=".$objDatabaseConnection->quote($userData["user_mail"]).",";
+		}
+
+		if($userData["user_phone"] !== $userExists["data"]["user_phone"]) {
+			$updateQuery .= "`user_phone`=".$objDatabaseConnection->quote($userData["user_phone"]).",";
+		}
+
+		$updateQuery.=
+		"
 				`user_first_name`=".$objDatabaseConnection->quote($userData["user_first_name"]).",
 				`user_last_name`=".$objDatabaseConnection->quote($userData["user_last_name"]).",
-				`user_mail`=".$objDatabaseConnection->quote($userData["user_mail"]).",
-				`user_phone`=".$objDatabaseConnection->quote($userData["user_phone"]).",
 				`user_address`=".$objDatabaseConnection->quote($userData["user_address"]).",
 				`user_password_hash`=".$objDatabaseConnection->quote($userData["user_password_hash"]).",
 				`user_role`=".$objDatabaseConnection->quote((int)$userData["user_role"]).",
-				`user_hero_level`=".$objDatabaseConnection->quote((int)$userData["user_hero_level"])."
+				`user_hero_level`=".$objDatabaseConnection->quote((int)$userData["user_hero_level"]).",
+				`user_terms_agreement`=".$objDatabaseConnection->quote((int)$userData["user_terms_agreement"]).",
+				`user_terms_quiz_agreement`=".$objDatabaseConnection->quote((int)$userData["user_terms_quiz_agreement"]).",
+				`user_newsletter`=".$objDatabaseConnection->quote((int)$userData["user_newsletter"])."
 			WHERE 
 				`user_unique_tag`=".$objDatabaseConnection->quote($userID)."
-			");
+		";
+
+		$affectedRows = $objDatabaseConnection->exec($updateQuery);
 
 		if(!$affectedRows) {
 			$result["data"] = false;
@@ -309,6 +343,9 @@ function users_get()
 				`user_address`,
 				`user_password_hash`,
 				`user_role`,
+				`user_terms_agreement`,
+				`user_terms_quiz_agreement`,
+				`user_newsletter`,
 				`user_created_timestamp`,
 				`user_updated_timestamp` 
 			FROM `users`

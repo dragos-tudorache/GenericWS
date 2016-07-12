@@ -9,7 +9,8 @@ require_once("lib/actions/categories/categories.php");
 $allowedFunctionCalls = array(
 	"user" => array("user_add", "user_data", "user_delete",	"user_update", "users_get"),
 	"users" => array("v"),
-	"category" => array("category_add" , "category_modify", "category_delete", "category_get")
+	"category" => array("category_add" , "category_modify", "category_delete", "category_get"),
+	"service_cat" => array("category_modify")
 	);
 
 $actionsMap = new ActionsMapper();

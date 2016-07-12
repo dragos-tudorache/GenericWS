@@ -45,3 +45,15 @@ CREATE TABLE IF NOT EXISTS `categories` (
 	PRIMARY KEY (`category_id`),
 	UNIQUE KEY `category_name` (`category_name`)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `register_user_actions` (
+	`register_id` int(11) NOT NULL AUTO_INCREMENT,
+	`register_action_name` varchar(255) NOT NULL COLLATE utf8_unicode_ci,
+	`register_action_score` int(11),
+	`register_action_metadata` text NOT NULL COLLATE utf8_unicode_ci,
+	`register_category_name` varchar(255) NOT NULL COLLATE utf8_unicode_ci,
+	`register_user_unique_tag` varchar(255) NOT NULL COLLATE utf8_unicode_ci,
+	`register_created_timestamp` DATETIME DEFAULT '0000-00-00 00:00:00',
+	`register_updated_timestamp` DATETIME DEFAULT '0000-00-00 00:00:00',
+	PRIMARY KEY (`register_id`)
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;

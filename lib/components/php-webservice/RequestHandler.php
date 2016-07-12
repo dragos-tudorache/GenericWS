@@ -39,10 +39,12 @@ class RequestHandler {
 				// $response["result"]["body"] = $this->actionsMapper[$strRequestMethod][$strResource];
 				if($strResource == "users") {
 					$resourceAction = "handle_user";
+				} else if($strResource == "service_cat") {
+					$resourceAction = "handle_category";
 				} else {
 					$resourceAction = "handle_".strtolower($strResource);
 				}
-				// file_put_contents(BASE_PATH."/log/log.txt", json_encode($resourceAction)."\r\n", FILE_APPEND);
+				// file_put_contents(BASE_PATH."/log/log.txt", json_encode($strResource.":".$resourceAction)."\r\n", FILE_APPEND);
 				$response = call_user_func(
 					$resourceAction, 
 					array("requestBody" => $requestBody, "requestURL" => $strRequestURL, "method" => $functionName )
